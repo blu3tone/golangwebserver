@@ -1,2 +1,2 @@
 # golangwebserver
-Web server in golfing
+Web server in golang

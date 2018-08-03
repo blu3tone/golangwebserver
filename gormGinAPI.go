@@ -51,6 +51,8 @@ func main() {
 		v1.GET("/", fetchAllPerson)
 		v1.GET("/:id", fetchSinglePerson)
 		v1.DELETE("/:id", deletePerson)
+		// Add Update Person Func
+		v1.PUT("/:id",updatePerson)
 	}
 
 	v2 := router.Group("/api/v2/address")
@@ -59,9 +61,39 @@ func main() {
 		v2.GET("/", fetchAllAddress)
 		v2.GET("/:id", fetchSingleAddress)
 		v2.DELETE("/:id", deleteAddress)
+		// Add Update Address Func
+		v2.PUT("/:id",updateAddress)
 	}
 	router.Run(":8089")
 
+}
+
+func updatePerson(c *gin.Context) {
+	
+ 	var person Person
+ 	id := c.Params.ByName(“id”)
+ 	if err := db.Where(“id = ?”, id).First(&person).Error; err != nil {
+    		c.AbortWithStatus(404)
+    		fmt.Println(err)
+ 	}
+ 	c.BindJSON(&person)
+ 	db.Save(&person)
+	c.JSON(200, person)
+	
+}
+
+func updateAddress(c *gin.Context) {
+	
+ 	var address Address
+ 	id := c.Params.ByName(“id”)
+ 	if err := db.Where(“id = ?”, id).First(&address).Error; err != nil {
+    		c.AbortWithStatus(404)
+    		fmt.Println(err)
+ 	}
+ 	c.BindJSON(&address)
+ 	db.Save(&address)
+	c.JSON(200, address)
+	
 }
 
 func createPerson(c *gin.Context)  {

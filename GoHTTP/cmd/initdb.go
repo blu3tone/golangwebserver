@@ -7,6 +7,8 @@ import (
 	"github.com/go-pg/pg/orm"
 	"log"
 	"GoHTTP/internal"
+	"golang.org/x/crypto/bcrypt"
+	"fmt"
 )
 
 func main() {
@@ -34,11 +36,7 @@ func main() {
 	INSERT INTO roles VALUES (3, 3, 'COMPANY_ADMIN');
 	INSERT INTO roles VALUES (4, 4, 'LOCATION_ADMIN');
 	INSERT INTO roles VALUES (5, 5, 'USER');
-
-	INSERT INTO users VALUES (1, now(),now(), NULL, 'Admin', 'Admin', 'admin', 'admin', 'uyen@gmail.com', NULL, NULL, NULL, NULL, true, 1, 1 );
-	
-	INSERT INTO user_books VALUES(1,1);
-	INSERT INTO user_books VALUES(2,1);`
+`
 	queries := strings.Split(dbInsert, ";")
 
 
@@ -62,7 +60,7 @@ func main() {
 			panic("Can not insert data: " + err.Error())
 		}
 	}
-	/*userInsert := `INSERT INTO users VALUES (1, now(),now(), NULL, 'Admin', 'Admin', 'admin', '%s', 'uyen@gmail.com', NULL, NULL, NULL, NULL, true, 1, 1 );`
+	userInsert := `INSERT INTO users VALUES (1, now(),now(), NULL, 'Admin', 'Admin', 'admin', '%s', 'uyen@gmail.com', NULL, NULL, NULL, NULL, true, 1, 1 );`
 	hashedPW, _ := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
 	_, err = db.Exec(fmt.Sprintf(userInsert, hashedPW))
 
@@ -71,6 +69,7 @@ func main() {
 	}
 	dbInsert = `INSERT INTO user_books VALUES(1,1);
 	INSERT INTO user_books VALUES(2,1);`
+
 	queries = strings.Split(dbInsert, ";")
 
 	for _, v := range queries[0 : len(queries)-1] {
@@ -78,11 +77,9 @@ func main() {
 		if err!= nil{
 			panic("Can not insert data: " + v)
 		}
-	}*/
+	}
 
 	log.Printf("Done!")
-
-
 }
 
 func createSchema(db *pg.DB, models ...interface{}) {

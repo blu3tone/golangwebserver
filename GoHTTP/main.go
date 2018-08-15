@@ -6,14 +6,16 @@ import (
 	"github.com/matryer/way"
 	"net/http"
 	"fmt"
-	"os"
-	"GoHTTP/cmd/db"
+		"GoHTTP/cmd/db"
 	"GoHTTP/internal"
 	"strconv"
 	"encoding/json"
 	"time"
-	"github.com/verifier"
-	)
+	"context"
+
+	"golang.org/x/crypto/bcrypt"
+	"os"
+)
 
 type Server struct {
 	db     *pg.DB
@@ -21,53 +23,6 @@ type Server struct {
 	email  string
 }
 
-func (s *Server) handLogin(user *model.User) http.HandlerFunc{
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		verify := verifier.New()
-
-		username := way.Param(r.Context(), "username")
-		password := way.Param(r.Context(), "password")
-
-		user = getUser(1, s)
-
-		log.Printf(strconv.Itoa(user.ID))
-
-		if user == nil{
-			fmt.Fprintln(w, "Error")
-			os.Exit(100)
-			verify.That(user == nil, "Your username or password were wrong!")
-
-		}
-
-		if username == user.Username && password == user.Password && user.RoleID ==1{
-			log.Printf("Match!")
-			cookie := &http.Cookie{}
-
-			cookie.Name = "sessionID"
-			cookie.Value = "something"
-			cookie.Expires = time.Now().Add(48 *time.Second)
-
-			http.SetCookie(w, cookie)
-
-			fmt.Fprintln(w, "You are on admin page!!")
-		}else{
-			fmt.Fprintf(w, "Your username or password were wrong!")
-		}
-
-
-	}
-}
-
-func getUser(id int, s *Server) *model.User{
-	user := new(model.User)
-
-	err := s.db.Model(user).Where("id = ?", id).Select()
-	if err != nil{
-		return nil
-	}
-	return user
-}
 
 func (s *Server) handleAPI() http.HandlerFunc  {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -75,13 +30,65 @@ func (s *Server) handleAPI() http.HandlerFunc  {
 	}
 }
 
-func (s *Server) getFirstBook(user model.User)  http.HandlerFunc{
+func (s *Server) handLogin() http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request) {
+
+
+		username := way.Param(r.Context	(), "username")
+		password := way.Param(r.Context(), "password")
+
+		user := getUser(username, s)
+
+		if user == nil{
+			fmt.Fprintf(w, "Your username or password were wrong!")
+			panic("Your username or password were wrong!")
+			os.Exit(100)
+		}
+
+		err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+		if err!=nil{
+			fmt.Fprintf(w, "Your username or password were wrong!")
+
+		}
+		ctx := context.WithValue(r.Context(), "userID", 1)
+
+		r = r.WithContext(ctx)
+
+		log.Printf("Match!")
+
+		expiration := time.Now().Add(365 * 24 * time.Hour)
+
+		cookie := http.Cookie{Name: "userid", Value : strconv.Itoa(user.ID) , Expires: expiration}
+
+		http.SetCookie(w, &cookie)
+
+		fmt.Fprintln(w, "You are on admin page!!")
+	}
+}
+
+func getUser(username string, s *Server) *model.User{
+	user := new(model.User)
+
+	err := s.db.Model(user).Where("username = ? ", username).Select()
+	if err != nil{
+		return nil
+	}
+	return user
+}
+
+func (s *Server) getFirstBook()  http.HandlerFunc{
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		book := new(model.Book)
-		fmt.Print(user.ID)
-		err := s.db.Model(book).Join("LEFT JOIN user_books ").JoinOn(" user_books.book_id = book.id").Where("user_books.user_id = ?", 1).First()
 
+		userid := r.Context().Value("userID")
+
+		if userid ==nil{
+			fmt.Fprintf(w, "Please login!!")
+			return
+		}
+
+		err := s.db.Model(book).Join("LEFT JOIN user_books ").JoinOn(" user_books.book_id = book.id").Where("user_books.user_id = ?", userid).First()
 		if err!=nil{
 			fmt.Fprint(w, "No book was found: ", err)
 		} else {
@@ -95,6 +102,30 @@ func (s *Server) getFirstBook(user model.User)  http.HandlerFunc{
 	}
 }
 
+/*func AddContextID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.Method, "-", r.RequestURI)
+		cookie, _ := r.Cookie("userid")
+		if cookie != nil {
+		//Add data to context
+			ctx := context.WithValue(r.Context(), "userID", 1)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		} else {
+			ctx := context.WithValue(r.Context(), "userID", 1)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		}
+	})
+}*/
+
+func middlewareOne(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Executing middlewareOne")
+		next.ServeHTTP(w, r)
+		log.Println("Executing middlewareOne again")
+	})
+}
+
 func main()  {
 	server := Server{}
 
@@ -102,20 +133,12 @@ func main()  {
 
 	server.router = way.NewRouter()
 
-	var user model.User
-
 	server.router.HandleFunc("GET", "/api/", server.handleAPI())
 
-	server.router.HandleFunc("GET", "/login/:username/:password", server.handLogin(&user))
+	server.router.Handle("GET", "/login/:username/:password", middlewareOne(server.handLogin()))
 
-	server.router.HandleFunc("GET", "/book", server.getFirstBook(user))
+	server.router.HandleFunc("		GET", "/book", server.getFirstBook())
 
 	log.Fatal(http.ListenAndServe(":10000", server.router))
 }
-
-
-
-
-
-
 

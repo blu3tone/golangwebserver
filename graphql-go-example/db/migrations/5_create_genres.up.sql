@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS genres(
+   id VARCHAR(100) PRIMARY KEY UNIQUE,
+    name VARCHAR(100),
+    rate REAL
+)

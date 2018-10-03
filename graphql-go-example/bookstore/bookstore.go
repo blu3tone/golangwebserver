@@ -1,7 +1,7 @@
 package bookstore
 
 import (
-	"graphql-go-example/db"
+	"github.com/blu3tone/golangwebserver/graphql-go-example/db"
 	"log"
 
 	"github.com/graph-gophers/graphql-go"

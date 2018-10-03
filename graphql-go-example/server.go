@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"graphql-go-example/bookstore"
+	"github.com/blu3tone/golangwebserver/graphql-go-example/bookstore"
 	"log"
 	"net/http"
 
@@ -25,7 +25,7 @@ func main() {
 
 	http.Handle("/query", &relay.Handler{Schema: schema})
 
-	log.Fatal(http.ListenAndServe(":8090", nil))
+	log.Fatal(http.ListenAndServe(":4000", nil))
 }
 
 var page = []byte(`
